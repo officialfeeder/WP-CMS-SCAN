@@ -6,7 +6,7 @@ from queue import Queue
 
 linux = 'clear'
 windows = 'cls'
-os.system([linux,windows][os.name == 'nt'])
+os.system([linux, windows][os.name == 'nt'])
 
 print("""
   _____               _          _ 
@@ -51,27 +51,35 @@ def worker():
     try:
         while True:
             url = q.get()
+            domen = url.replace('http://', '').replace('https://', '')
             is_wordpress = detect_wordpress(url)
             if is_wordpress is None:
-                print(f"> \033[33m{url} -> Request Timeout !\033[0m")
+                print(f"[!] \033[33m{domen} -> Request Timeout !\033[0m")
             elif is_wordpress:
-                print(f'> \033[92m{url} -> WordPress !\033[0m')
+                print(f'[+] \033[92m{domen} -> WordPress !\033[0m')
                 wp_count.put(1)
+                with open('wpsite.txt', 'a') as f:
+                    f.write(domen + '\n')
             else:
-                print(f'> \033[91m{url} -> Not Wordpress !\033[0m')
+                print(f'[-] \033[91m{domen} -> Not Wordpress !\033[0m')
             q.task_done()
     except:
         pass
 
 with open(filename, 'r') as file:
-    websites = file.read().splitlines()
+    listwp = file.read().splitlines()
+
+# Remove duplicates from the list of websites
+listwp = list(set(listwp))
 
 q = Queue()
 wp_count = Queue()
 
-for url in websites:
-    if not url.startswith('http') or not url.startswith('https'):
+for url in listwp:
+    if not url.startswith('http') and not url.startswith('https'):
         url = 'http://' + url
+    elif not url.startswith('https') and not url.startswith('http'):
+        url = 'https://' + url
     q.put(url)
 
 for i in range(num_threads):
@@ -83,4 +91,5 @@ q.join()
 total_wp = wp_count.qsize()
 
 print(f'\n- Total found WordPress: \033[92m{total_wp}\033[0m')
-print(f'- Total not found: \033[91m{len(websites) - total_wp}\033[0m')
+print(f'- Total not found: \033[91m{len(listwp) - total_wp}\033[0m')
+print(f"- Thank For Using, Result Save To (wpsite.txt)")
